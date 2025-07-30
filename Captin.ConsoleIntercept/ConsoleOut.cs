@@ -8,8 +8,10 @@ namespace Captin.ConsoleIntercept
     /// </summary>
     public static class ConsoleOut
     {
-        private static ConsoleOutProxyWriter writerNotifier;
+        private static ConsoleOutProxyWriter writerNotifierOut;
+        private static ConsoleOutProxyWriter writerNotifierErr;
         private static readonly TextWriter consoleOut = Console.Out;
+        private static readonly TextWriter consoleErr = Console.Error;
 
         /// <summary>
         /// Start observing changes to <see cref="Console.Out"/>.
@@ -20,22 +22,56 @@ namespace Captin.ConsoleIntercept
         public static Observer Observe()
         {
             InitNotifier();
-            var subscription = writerNotifier.Subscribe(new StringWriter());
+            var subscription = writerNotifierOut.Subscribe(new StringWriter());
+            return subscription;
+        }
+
+        /// <summary>
+        /// Start observing changes to <see cref="Console.Error"/>.
+        ///
+        /// <para>This leaves the original console out intact.</para>
+        /// </summary>
+        /// <returns></returns>
+        public static Observer ObserveError()
+        {
+            InitNotifierErr();
+            var subscription = writerNotifierErr.Subscribe(new StringWriter());
             return subscription;
         }
 
         private static void InitNotifier()
         {
-            if(writerNotifier == null)
+            if (writerNotifierOut == null)
             {
-                writerNotifier = new ConsoleOutProxyWriter(consoleOut);
-                writerNotifier.OnObserversChanged += (sender, activeObservers) =>
+                writerNotifierOut = new ConsoleOutProxyWriter(consoleOut);
+                writerNotifierOut.OnObserversChanged += (sender, activeObservers) =>
                 {
-                    if(activeObservers == 0) {
+                    if (activeObservers == 0)
+                    {
                         Console.SetOut(consoleOut);
                     }
-                    else {
-                        Console.SetOut(writerNotifier);
+                    else
+                    {
+                        Console.SetOut(writerNotifierOut);
+                    }
+                };
+            }
+        }
+
+        private static void InitNotifierErr()
+        {
+            if (writerNotifierErr == null)
+            {
+                writerNotifierErr = new ConsoleOutProxyWriter(consoleErr);
+                writerNotifierErr.OnObserversChanged += (sender, activeObservers) =>
+                {
+                    if (activeObservers == 0)
+                    {
+                        Console.SetError(consoleErr);
+                    }
+                    else
+                    {
+                        Console.SetError(writerNotifierErr);
                     }
                 };
             }
